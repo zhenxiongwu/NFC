@@ -1,0 +1,3 @@
+rootProject.name = 'nfc'
+
+include ':app', ':nfc_library'
