@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
@@ -16,9 +15,10 @@ import android.nfc.tech.NfcA;
 import android.nfc.tech.NfcB;
 import android.nfc.tech.NfcF;
 import android.nfc.tech.NfcV;
-import android.os.Parcelable;
+import android.support.annotation.NonNull;
 import android.widget.Toast;
 
+import com.example.nfc_library.module.tech.ndef.NdefWrapper;
 import com.example.nfc_library.utils.NfcStateReceiver;
 import com.example.nfc_library.utils.OnNfcStateChangeListener;
 import com.facebook.react.bridge.ActivityEventListener;
@@ -30,6 +30,7 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
@@ -66,7 +67,7 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
     /**
      * core object
      */
-    private WritableMap mTag;
+    private Tag mTag;
 
 
     public NfcAdapterModule(ReactApplicationContext reactContext) {
@@ -85,21 +86,22 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
                 Toast.makeText(mReactContext, intent.getAction(), Toast.LENGTH_SHORT).show();
 
                 if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) {
-                    Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-                    parseTag(tag);
                     Toast.makeText(mReactContext, "this is ndef", Toast.LENGTH_SHORT).show();
 
-                } else if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(intent.getAction())) {
-                    Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+                    mTag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+                    WritableMap tagMap = parseTag(mTag);
+                    notifyTagDetected(tagMap);
 
-                    Parcelable[] rawMsgs = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
-                    if (rawMsgs != null && rawMsgs.length > 0) {
-                        Toast.makeText(mReactContext, "this is tech "+((NdefMessage)rawMsgs[0]).getRecords()[0].toMimeType(), Toast.LENGTH_SHORT).show();
-                    }
-                    parseTag(tag);
+                } else if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(intent.getAction())) {
+                    Toast.makeText(mReactContext, "this is tech ", Toast.LENGTH_SHORT).show();
+
+                    mTag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+
+                    WritableMap tagMap = parseTag(mTag);
+                    notifyTagDetected(tagMap);
 
                 } else if (NfcAdapter.ACTION_TAG_DISCOVERED.equals(intent.getAction())) {
-                    Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+                    mTag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
 
                 }
             }
@@ -223,7 +225,13 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
         for (int i = 0; i < filters.size(); i++) {
             String filter = filters.getString(i);
             mIntentFilters[i] = new IntentFilter(filter);
-            Toast.makeText(mReactContext, filter, Toast.LENGTH_SHORT).show();
+            if (filter.equals(NfcAdapter.ACTION_NDEF_DISCOVERED)) {
+                try {
+                    mIntentFilters[i].addDataType("*/*");
+                } catch (IntentFilter.MalformedMimeTypeException e) {
+                    e.printStackTrace();
+                }
+            }
         }
 
         mTechLists = new String[techs.size()][];
@@ -255,10 +263,45 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
         mNfcAdapter.disableForegroundDispatch(getCurrentActivity());
     }
 
-    private void parseTag(Tag tag) {
-        mTag = Arguments.createMap();
-        mTag.putInt("id", ByteBuffer.wrap(tag.getId()).getInt());
-        mReactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(EVENT_TAG_DETECTED, mTag);
-        Toast.makeText(mReactContext, "parseTag", Toast.LENGTH_SHORT).show();
+    private WritableMap parseTag(@NonNull Tag tag) {
+        WritableMap tagMap = Arguments.createMap();
+        tagMap.putInt("id", ByteBuffer.wrap(mTag.getId()).getInt());
+        tagMap.putArray("tech-list", parseTechList(tag));
+        if (isTechSupported(tag,Ndef.class.getName())) {
+            NdefWrapper ndefWrapper = new NdefWrapper(mReactContext,tag);
+            tagMap.putMap("ndef",ndefWrapper.getTagMap());
+        }
+        return tagMap;
     }
+
+    private WritableArray parseTechList(@NonNull Tag tag) {
+        WritableArray techList = Arguments.createArray();
+        for (String tech : tag.getTechList()) {
+            techList.pushString(tech);
+        }
+        return techList;
+    }
+
+    private boolean checkSupportTechs(@NonNull Tag tag, @NonNull String[] checkTechs) {
+        String[] techList = tag.getTechList();
+        if (techList == null || techList.length == 0) return false;
+        for (String checkTech : checkTechs) {
+            if(!isTechSupported(tag,checkTech)){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isTechSupported(Tag tag,String checkTech){
+        for(String tech: tag.getTechList()){
+            if(tech.equals(checkTech)) return true;
+        }
+        return false;
+    }
+
+    private void notifyTagDetected(WritableMap writableMap) {
+        mReactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(EVENT_TAG_DETECTED, writableMap);
+    }
+
 }

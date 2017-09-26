@@ -15,6 +15,6 @@ public class NdefModule extends ReactContextBaseJavaModule{
 
     @Override
     public String getName() {
-        return null;
+        return "Ndef";
     }
 }
