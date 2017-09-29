@@ -2,7 +2,7 @@ package com.nfc;
 
 import android.app.Application;
 
-import com.example.nfc_library.NfcAdapterPackage;
+import com.example.nfc.ReactAndroidNfcPackage;
 import com.facebook.react.ReactApplication;
 import com.oblador.vectoricons.VectorIconsPackage;
 import com.facebook.react.ReactNativeHost;
@@ -25,7 +25,7 @@ public class MainApplication extends Application implements ReactApplication {
     protected List<ReactPackage> getPackages() {
       return Arrays.<ReactPackage>asList(
           new MainReactPackage(),
-            new VectorIconsPackage(), new NfcAdapterPackage()
+            new VectorIconsPackage(), new ReactAndroidNfcPackage()
       );
     }
   };

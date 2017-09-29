@@ -139,7 +139,7 @@ dependencies {
     compile 'com.android.support:appcompat-v7:26.+'
     compile 'com.facebook.react:react-native:+'
     // From node_modules
-    compile project(':nfc_library')
+    compile project(':react-android-nfc')
 }
 
 // Run this once to be able to run the application with BUCK
