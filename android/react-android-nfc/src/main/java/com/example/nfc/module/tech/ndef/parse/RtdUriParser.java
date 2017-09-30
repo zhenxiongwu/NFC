@@ -26,6 +26,7 @@ public class RtdUriParser extends NdefRecordParser {
         WritableMap recordMap = Arguments.createMap();
         recordMap.putString("TNF", NdefRecordModule.TNF_WELL_KNOWN);
         recordMap.putString("RCT",NdefRecordModule.RTD_URI);
+        recordMap.putString("id",new String(ndefRecord.getId()));
         recordMap.putBoolean("isURI",true);
         recordMap.putString("URI",uri.toString());
         recordMap.putString("label",uri.getScheme());

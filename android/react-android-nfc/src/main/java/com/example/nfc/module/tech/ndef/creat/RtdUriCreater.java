@@ -12,14 +12,28 @@ import com.facebook.react.bridge.ReadableMap;
 public class RtdUriCreater extends NdefRecordCreater {
     @Override
     public boolean checkRecordMap(ReadableMap readableMap) {
-        String tnf = readableMap.getString("TNF");
-        String rtd = readableMap.getString("RTD");
+        String tnf = null;
+        String rtd = null;
+        try {
+            tnf = readableMap.getString("TNF");
+            rtd = readableMap.getString("RTD");
+        }catch (Exception e){
+            return false;
+        }
         return tnf != null && tnf.equals(NdefRecordModule.TNF_WELL_KNOWN)
                 && rtd != null && rtd.equals(NdefRecordModule.RTD_URI);
     }
 
     @Override
     public NdefRecord createRecord(ReadableMap readableMap) {
-        return NdefRecord.createUri(readableMap.getString("content"));
+        String content = null;
+        try{
+            content = readableMap.getString("content");
+            if(content==null || content.equals(""))
+                content = "[scheme]:[content]";
+        }catch (Exception e){
+            content = "[scheme]:[content]";
+        }
+        return NdefRecord.createUri(content);
     }
 }

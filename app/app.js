@@ -7,7 +7,7 @@ import {
     TouchableOpacity,
     StyleSheet,
 } from 'react-native';
-import {NfcAdapter,NdefRecord} from './nfc';
+import {NfcAdapter, NdefRecord} from './nfc';
 
 export default class App extends Component {
 
@@ -15,8 +15,8 @@ export default class App extends Component {
         super(props);
         this.state = {
             isAvailable: NfcAdapter.isAvailable,
-            writeState:false,
-            result:'',
+            writeState: false,
+            result: '',
         };
 
     }
@@ -24,7 +24,7 @@ export default class App extends Component {
     componentWillMount() {
         NfcAdapter.isEnabled(
             (isEnabled) => {
-                this.setState({NfcIsEnabled:isEnabled})
+                this.setState({NfcIsEnabled: isEnabled})
             }
         )
     }
@@ -38,10 +38,11 @@ export default class App extends Component {
                         <Text>，当前{this.state.NfcIsEnabled ? '' : '不'}可用</Text>
                     </Text>
                 </View>
-                {this.state.tag && this._renderTagInfo()}
-                <Text>{this.state.writeState&&this.state.result}</Text>
+                <View style={{flex: 1}}>
+                    {this.state.tag && this._renderTagInfo()}
+                </View>
+                <Text>{this.state.writeState && this.state.result}</Text>
                 <Button onPress={this._writeNdefMessage}
-                        style={{height:30}}
                         title="写标签"
                 >
                 </Button>
@@ -49,14 +50,19 @@ export default class App extends Component {
         )
     }
 
-    _writeNdefMessage=async ()=>{
+    _writeNdefMessage = async () => {
         try {
             const result = await NfcAdapter.writeNdefMessage(
-                [NdefRecord.createText('hello'), NdefRecord.createUri('http://www.baidu.com')]
+                [
+                    NdefRecord.createText('hello wuzhenxiogn'),
+                    NdefRecord.createUri('http://www.baidu.com'),
+                    NdefRecord.createMime('text/plain', 'mime'),
+                    NdefRecord.createARR(),
+                ]
             );
-            this.setState({writeState:result,result:'写入成功'});
-        }catch(e){
-            this.setState({writeState:true,result:e.toString()})
+            this.setState({writeState: result, result: '写入成功'});
+        } catch (e) {
+            this.setState({writeState: true, result: e.toString()})
         }
 
     }
@@ -70,7 +76,7 @@ export default class App extends Component {
                         ID:{JSON.stringify(this.state.tag.id)}
                     </Text>
                 </View>
-                <View style={{paddingHorizontal:10}}>
+                <View style={{paddingHorizontal: 10}}>
                     <Text style={styles.id}>
                         支持的格式:
                     </Text>
@@ -109,22 +115,29 @@ export default class App extends Component {
     }
 
     _listenOnNfcState() {
-        NfcAdapter.enableStateListener();
-        NfcAdapter.addStateListener((state) => {
-            if (state == NfcAdapter.STATE_ON)
-                this.setState({NfcIsEnabled:true});
-            else
-                this.setState({NfcIsEnabled:false})
-        })
+        // NfcAdapter.enableStateListener();
+        NfcAdapter.setStateListener(this.nfcStateListener)
     }
 
     _listenOnTagDetected() {
-        NfcAdapter.enableForegroundDispatch([NfcAdapter.FILTER_NDEF_DISCOVERED], [[NfcAdapter.TECH_NDEF]]);
-        NfcAdapter.addTagDetectedListener(
-            (tag) => {
-                this.setState({"tag": tag});
-            }
-        )
+        NfcAdapter.enableForegroundDispatch([NfcAdapter.FILTER_NDEF_DISCOVERED, NfcAdapter.FILTER_TECH_DISCOVERED], [[NfcAdapter.TECH_NDEF], [NfcAdapter.TECH_NFC_A]]);
+        NfcAdapter.setTagDetectedListener(this.tagDetectedListener);
+    }
+
+    nfcStateListener = (state) => {
+        if (state == NfcAdapter.STATE_ON)
+            this.setState({NfcIsEnabled: true});
+        else
+            this.setState({NfcIsEnabled: false})
+    }
+
+    tagDetectedListener = (tag) => {
+        this.setState({"tag": tag});
+    }
+
+    componentWillUnmount() {
+        NfcAdapter.removeStateListener(this.nfcStateListener);
+        NfcAdapter.removeTagDetectedListener(this.tagDetectedListener);
     }
 }
 
@@ -140,6 +153,7 @@ const styles = StyleSheet.create({
     id: {
         fontSize: 16,
         fontWeight: "500",
-    }
+    },
+
 
 })

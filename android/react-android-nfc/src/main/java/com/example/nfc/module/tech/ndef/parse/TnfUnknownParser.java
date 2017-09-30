@@ -7,24 +7,24 @@ import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.WritableMap;
 
 /**
- * Created by wuzhenxiong on 2017/9/27.
+ * Created by wuzhenxiong on 2017/9/30.
  */
 
-public class TnfMimeMediaParser extends NdefRecordParser {
+public class TnfUnknownParser extends NdefRecordParser {
 
     @Override
     public boolean checkRecord(NdefRecord ndefRecord) {
-        return ndefRecord.getTnf()==NdefRecord.TNF_MIME_MEDIA;
+        return ndefRecord.getTnf()==NdefRecord.TNF_UNKNOWN;
     }
 
     @Override
     public WritableMap parseRecord(NdefRecord ndefRecord) {
         WritableMap recordMap = Arguments.createMap();
-        recordMap.putString("TNF", NdefRecordModule.TNF_MIME_MEDIA);
+        recordMap.putString("TNF", NdefRecordModule.TNF_UNKNOWN);
         recordMap.putString("id",new String(ndefRecord.getId()));
         recordMap.putBoolean("isURI",false);
-        recordMap.putString("label",ndefRecord.toMimeType());
-        recordMap.putString("content",new String(ndefRecord.getPayload()));
-        return recordMap;
+        recordMap.putString("label","unknown type");
+        recordMap.putString("content","unknown content");
+        return null;
     }
 }

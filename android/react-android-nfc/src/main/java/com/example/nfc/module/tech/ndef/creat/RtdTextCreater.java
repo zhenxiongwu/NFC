@@ -21,15 +21,27 @@ public class RtdTextCreater extends NdefRecordCreater {
 
     @Override
     public boolean checkRecordMap(ReadableMap readableMap) {
-        String tnf = readableMap.getString("TNF");
-        String rtd = readableMap.getString("RTD");
+        String tnf = null;
+        String rtd = null;
+        try {
+            tnf = readableMap.getString("TNF");
+            rtd = readableMap.getString("RTD");
+        } catch (Exception e) {
+            return false;
+        }
         return tnf != null && tnf.equals(NdefRecordModule.TNF_WELL_KNOWN)
                 && rtd != null && rtd.equals(NdefRecordModule.RTD_TEXT);
     }
 
     @Override
     public NdefRecord createRecord(ReadableMap readableMap) {
-        return createRecord(readableMap.getString("content"));
+        String content;
+        try{
+            content = readableMap.getString("content");
+        }catch (Exception e){
+            content = "";
+        }
+        return createRecord(content);
     }
 
     private NdefRecord createRecord(String text) {

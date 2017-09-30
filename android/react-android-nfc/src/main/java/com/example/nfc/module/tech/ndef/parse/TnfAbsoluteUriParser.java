@@ -23,6 +23,7 @@ public class TnfAbsoluteUriParser extends NdefRecordParser {
         Uri uri = ndefRecord.toUri();
         WritableMap recordMap = Arguments.createMap();
         recordMap.putString("TNF", NdefRecordModule.TNF_ABSOLUTE_URI);
+        recordMap.putString("id",new String(ndefRecord.getId()));
         recordMap.putBoolean("isURI",true);
         recordMap.putString("URI",uri.toString());
         recordMap.putString("label",uri.getScheme());

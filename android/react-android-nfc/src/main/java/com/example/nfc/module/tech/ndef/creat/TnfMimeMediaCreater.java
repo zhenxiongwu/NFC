@@ -15,12 +15,29 @@ public class TnfMimeMediaCreater extends NdefRecordCreater {
 
     @Override
     public boolean checkRecordMap(ReadableMap readableMap) {
-        String tnf = readableMap.getString("TNF");
+        String tnf = null;
+        try {
+            tnf = readableMap.getString("TNF");
+        }catch (Exception e){
+            return false;
+        }
         return tnf != null && tnf.equals(NdefRecordModule.TNF_MIME_MEDIA);
     }
 
     @Override
     public NdefRecord createRecord(ReadableMap readableMap) {
-        return NdefRecord.createMime(readableMap.getString("type"),readableMap.getString("content").getBytes(Charset.forName("US-ASCII")));
+        String type;
+        String content;
+        try{
+            type = readableMap.getString("type");
+        }catch (Exception e){
+            type = "[type]/[subtype]";
+        }
+        try{
+            content = readableMap.getString("content");
+        }catch (Exception e){
+            content = "[content]";
+        }
+        return NdefRecord.createMime(type,content.getBytes(Charset.forName("US-ASCII")));
     }
 }

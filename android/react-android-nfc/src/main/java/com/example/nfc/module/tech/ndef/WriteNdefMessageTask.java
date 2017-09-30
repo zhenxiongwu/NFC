@@ -25,7 +25,7 @@ public class WriteNdefMessageTask extends AsyncTask<ReadableArray, Integer, Inte
     private Ndef mNdef;
     private Promise mPromise;
 
-    public WriteNdefMessageTask(Context context,Ndef ndef, Promise promise) {
+    public WriteNdefMessageTask(Context context, Ndef ndef, Promise promise) {
         mContext = context;
         mNdef = ndef;
         mPromise = promise;
@@ -38,10 +38,10 @@ public class WriteNdefMessageTask extends AsyncTask<ReadableArray, Integer, Inte
         try {
             mNdef.connect();
             NdefMessage ndefMessage = parseMessageMap(ndefMessages[0]);
-            try{
-                if(!mNdef.isWritable()){
+            try {
+                if (!mNdef.isWritable()) {
                     return -2;
-                }else if(mNdef.getMaxSize()<ndefMessage.toByteArray().length){
+                } else if (mNdef.getMaxSize() < ndefMessage.toByteArray().length) {
                     return -3;
                 }
                 mNdef.writeNdefMessage(ndefMessage);
@@ -58,28 +58,31 @@ public class WriteNdefMessageTask extends AsyncTask<ReadableArray, Integer, Inte
 
     @Override
     protected void onPostExecute(Integer b) {
-        if(b==1){
+        if (b == 1) {
             mPromise.resolve(true);
-        }else if(b==0){
-            mPromise.reject(NfcAdapterModule.NULL_OBJECT_EXCEPTION,"Illegal call, please check your codes");
-        }else if(b==-1){
-            mPromise.reject(NfcAdapterModule.IO_EXCEPTION,"Ndef connection failed");
-        }else if(b==-2){
-            mPromise.reject(NfcAdapterModule.READ_ONLY_EXCEPTION,"The tag is read-only");
-        }else if(b==-3){
+        } else if (b == 0) {
+            mPromise.reject(NfcAdapterModule.NULL_OBJECT_EXCEPTION, "Illegal call, please check your codes");
+        } else if (b == -1) {
+            mPromise.reject(NfcAdapterModule.IO_EXCEPTION, "Ndef connection failed");
+        } else if (b == -2) {
+            mPromise.reject(NfcAdapterModule.READ_ONLY_EXCEPTION, "The tag is read-only");
+        } else if (b == -3) {
             mPromise.reject(NfcAdapterModule.OVERFLOW_EXCEPTION, "The message is too big for the tag");
-        }else if(b==-4){
-            mPromise.reject(NfcAdapterModule.FORMAT_EXCEPTION,"The format of the data is illegal for the tag");
+        } else if (b == -4) {
+            mPromise.reject(NfcAdapterModule.FORMAT_EXCEPTION, "The format of the data is illegal for the tag");
         }
     }
 
     private NdefMessage parseMessageMap(ReadableArray message) {
         NdefRecord[] records = new NdefRecord[message.size()];
         NdefFormatManager ndefFormatManager = NdefFormatManager.getInstance(mContext);
-        for(int i = 0; i<message.size(); i++){
+        for (int i = 0; i < message.size(); i++) {
             ReadableMap recordMap = message.getMap(i);
             NdefRecordCreater ndefRecordCreater = ndefFormatManager.getBestCreater(recordMap);
-            records[i] = ndefRecordCreater.createRecord(recordMap);
+            if (ndefRecordCreater == null) {
+                records[i] = null;
+            } else
+                records[i] = ndefRecordCreater.createRecord(recordMap);
         }
         return new NdefMessage(records);
     }

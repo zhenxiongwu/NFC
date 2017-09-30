@@ -29,7 +29,7 @@ public class NdefReader implements TagDataReader {
     public WritableMap getTagMap() {
         if (mNdef == null) return null;
         WritableMap tagMap = Arguments.createMap();
-        tagMap.putString("type", mNdef.getType());
+        tagMap.putString("formatType", mNdef.getType());
         tagMap.putBoolean("isWritable", mNdef.isWritable());
         tagMap.putBoolean("canMakeReadOnly", mNdef.canMakeReadOnly());
         tagMap.putInt("maxSize", mNdef.getMaxSize());

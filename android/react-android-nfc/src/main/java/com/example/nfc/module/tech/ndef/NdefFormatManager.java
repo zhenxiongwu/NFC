@@ -48,7 +48,7 @@ public class NdefFormatManager {
         mCreaters = new ArrayList<>();
         mCreaters.add(new RtdTextCreater(mContext));
         mCreaters.add(new RtdUriCreater());
-        mCreaters.add(new TnfExternalTypeCreater());
+        mCreaters.add(new TnfExternalTypeCreater(mContext));
         mCreaters.add(new TnfMimeMediaCreater());
     }
 

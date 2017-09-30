@@ -51,6 +51,7 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
     public final static String EVENT_STATE_CHANGED = "NFC_ADAPTER_STATE_CHANGED";
     public final static String EVENT_TAG_DETECTED = "A_TAG_IS_DETECTED";
 
+    public final static String ILLEGAL_OPERATION_EXCEPTION = "IllegalOperationException";
     public final static String IO_EXCEPTION = "IOException";
     public final static String NULL_OBJECT_EXCEPTION = "NullObjectException";
     public final static String READ_ONLY_EXCEPTION = "ReadOnlyException";
@@ -59,7 +60,7 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
 
     private final ReactApplicationContext mReactContext;
     private final NfcAdapter mNfcAdapter;
-    private boolean isListeningOnAdapterState;
+//    private boolean isListeningOnAdapterState;
     private boolean toReadTag;
     private boolean toWriteTag;
 
@@ -70,6 +71,11 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
      * isEnableForegroundDispatch is controlled by the module caller
      */
     private boolean isEnableForegroundDispatch;
+
+    /**
+     * isForegroundDispatchEnabled is controlled by this module
+     */
+    private boolean isForegroundDispatchEnabled;
 
     private Map<String, Object> mConstants;
 
@@ -87,13 +93,25 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
         super(reactContext);
         mReactContext = reactContext;
         mNfcAdapter = NfcAdapter.getDefaultAdapter(mReactContext);
-        isListeningOnAdapterState = false;
+//        isListeningOnAdapterState = false;
         isEnableForegroundDispatch = false;
+        isForegroundDispatchEnabled = false;
         toReadTag = false;
         toWriteTag = false;
 
         mConstants = new HashMap<>();
 
+
+        /**
+         * Listen on nfc state changing.
+         */
+        IntentFilter filter = new IntentFilter(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED);
+        mReactContext.registerReceiver(NfcStateReceiver.getInstance(), filter);
+        NfcStateReceiver.getInstance().addListener(this);
+
+        /**
+         * Listen on new intent
+         */
         ActivityEventListener mActivityEventListener = new BaseActivityEventListener() {
             @Override
             public void onNewIntent(Intent intent) {
@@ -108,24 +126,26 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
             }
         };
 
+        /**
+         * Listen on events of host activity's lifecycle
+         */
         LifecycleEventListener mLifecycleEventListener = new LifecycleEventListener() {
             @Override
             public void onHostResume() {
-                if (isEnableForegroundDispatch) {
+                if (isEnableForegroundDispatch && !isForegroundDispatchEnabled) {
                     _enableForegroundDispatch();
                 }
             }
 
             @Override
             public void onHostPause() {
-                if (isEnableForegroundDispatch) {
+                if (isForegroundDispatchEnabled) {
                     _disableForegroundDispatch();
                 }
             }
 
             @Override
             public void onHostDestroy() {
-
             }
         };
 
@@ -170,6 +190,7 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
         mConstants.put("TECH_MIFARE_CLASSIC", MifareClassic.class.getName());
         mConstants.put("TECH_MIFARE_ULTRALIGHT", MifareUltralight.class.getName());
 
+
         mConstants.put("IO_EXCEPTION",IO_EXCEPTION);
         mConstants.put("NULL_OBJECT_EXCEPTION",NULL_OBJECT_EXCEPTION);
         mConstants.put("READ_ONLY_EXCEPTION",READ_ONLY_EXCEPTION);
@@ -192,29 +213,34 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
     /**
      * Enable the module to listen on the changing of the nfc adapter state
      */
-    @ReactMethod
+/*    @ReactMethod
     public void enableStateListener() {
         if (isListeningOnAdapterState) return;
         IntentFilter filter = new IntentFilter(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED);
-        mReactContext.registerReceiver(NfcStateReceiver.getDefaultReceiver(), filter);
-        NfcStateReceiver.getDefaultReceiver().addListener(this);
+        mReactContext.registerReceiver(NfcStateReceiver.getInstance(), filter);
+        NfcStateReceiver.getInstance().addListener(this);
         isListeningOnAdapterState = true;
-    }
+    }*/
 
     /**
      * Disable the module to listen on the changing of the nfc adapter state
      */
-    @ReactMethod
+/*    @ReactMethod
     public void disableStateListener() {
         if (isListeningOnAdapterState) {
-            NfcStateReceiver.getDefaultReceiver().removeListener(this);
-            mReactContext.unregisterReceiver(NfcStateReceiver.getDefaultReceiver());
+            NfcStateReceiver.getInstance().removeListener(this);
+            mReactContext.unregisterReceiver(NfcStateReceiver.getInstance());
             isListeningOnAdapterState = false;
         }
-    }
+    }*/
 
     @Override
     public void onNfcStateChange(int state) {
+        if(state==NfcAdapter.STATE_ON && isEnableForegroundDispatch && !isForegroundDispatchEnabled){
+            _enableForegroundDispatch();
+        }else if(state == NfcAdapter.STATE_TURNING_OFF && isForegroundDispatchEnabled) {
+            _disableForegroundDispatch();
+        }
         mReactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(EVENT_STATE_CHANGED, state);
     }
 
@@ -257,6 +283,7 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
         Intent intent = new Intent(mReactContext, currentActivity.getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(mReactContext, 0, intent, 0);
         mNfcAdapter.enableForegroundDispatch(currentActivity, pendingIntent, mIntentFilters, mTechLists);
+        isForegroundDispatchEnabled = true;
     }
 
     @ReactMethod
@@ -268,6 +295,7 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
 
     private void _disableForegroundDispatch() {
         mNfcAdapter.disableForegroundDispatch(getCurrentActivity());
+        isForegroundDispatchEnabled = false;
     }
 
     private WritableMap parseTag(@NonNull Tag tag) {
@@ -320,6 +348,10 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
 
     @ReactMethod
     public void writeNdefMessage(ReadableArray message, Promise promise) {
+        if(mNfcAdapter==null || !mNfcAdapter.isEnabled()){
+            promise.reject(ILLEGAL_OPERATION_EXCEPTION,"Nfc feature of the device is unusable");
+            return;
+        }
         toWriteTag = true;
         mNdefWriteRequestHandler = new NdefWriteRequsetHandler(message, promise);
     }
@@ -341,8 +373,12 @@ public class NfcAdapterModule extends ReactContextBaseJavaModule implements OnNf
         mReactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(EVENT_TAG_DETECTED, tagMap);
 
         if (toWriteTag) {
-            if (mNdef != null && mNdefWriteRequestHandler != null) {
-                new WriteNdefMessageTask(mReactContext,mNdef,mNdefWriteRequestHandler.promise).execute(mNdefWriteRequestHandler.message);
+            if(mNdefWriteRequestHandler!=null){
+                if (mNdef != null) {
+                    new WriteNdefMessageTask(mReactContext,mNdef,mNdefWriteRequestHandler.promise).execute(mNdefWriteRequestHandler.message);
+                }else{
+                    mNdefWriteRequestHandler.promise.reject(FORMAT_EXCEPTION,"The tag does not support Ndef");
+                }
                 mNdefWriteRequestHandler = null;
             }
             toWriteTag=false;

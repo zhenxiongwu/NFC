@@ -16,7 +16,7 @@ public class NfcStateReceiver extends BroadcastReceiver {
 
     private static NfcStateReceiver sNfcStateReceiver = null;
 
-    public static NfcStateReceiver getDefaultReceiver() {
+    public static NfcStateReceiver getInstance() {
         if (sNfcStateReceiver == null) {
             sNfcStateReceiver = new NfcStateReceiver();
         }

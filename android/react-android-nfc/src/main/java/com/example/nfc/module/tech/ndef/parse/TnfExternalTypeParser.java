@@ -23,7 +23,7 @@ public class TnfExternalTypeParser extends NdefRecordParser {
         Uri uri = ndefRecord.toUri();
         WritableMap recordMap = Arguments.createMap();
         recordMap.putString("TNF", NdefRecordModule.TNF_EXTERNAL_TYPE);
-        recordMap.putString("id",ndefRecord.getId().toString());
+        recordMap.putString("id",new String(ndefRecord.getId()));
         recordMap.putBoolean("isURI", true);
         recordMap.putString("URI", uri.toString());
         String type = uri.getPath();
